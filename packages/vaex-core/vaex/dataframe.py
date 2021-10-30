@@ -3790,12 +3790,13 @@ class DataFrame(object):
         # self.cat(i1=max(0, N-n), i2=min(len(self), N))
         return self[max(0, N - n):min(len(self), N)]
 
-    def _head_and_tail_table(self, n=5, format='html'):
+    def _head_and_tail_table(self, n=None, format='html'):
+        n = n or vaex.settings.display.max_rows
         N = _len(self)
-        if N <= n * 2:
+        if N <= n:
             return self._as_table(0, N, format=format)
         else:
-            return self._as_table(0, n, N - n, N, format=format)
+            return self._as_table(0, math.ceil(n / 2), N - math.floor(n / 2), N, format=format)
 
     def head_and_tail_print(self, n=5):
         """Display the first and last n elements of a DataFrame."""
@@ -3898,26 +3899,32 @@ class DataFrame(object):
 
         # we need to get the underlying names since we use df.evaluate
         column_names = self.get_column_names()
+        max_columns = vaex.settings.display.max_columns
+        if (max_columns is not None) and (max_columns > 0):
+            if max_columns < len(column_names):
+                column_names = column_names[:math.ceil(max_columns/2)] + ['...'] + column_names[-math.floor(max_columns/2):]
         values_list = []
         values_list.append(['#', []])
         # parts += ["<thead><tr>"]
-        for name in column_names:
+        for i, name in enumerate(column_names):
             values_list.append([name, []])
             # parts += ["<th>%s</th>" % name]
         # parts += ["</tr></thead>"]
-
         def table_part(k1, k2, parts):
             N = k2 - k1
             # slicing will invoke .extract which will make the evaluation
             # much quicker
             df = self[k1:k2]
             try:
-                values = dict(zip(column_names, df.evaluate(column_names)))
+                values = {name: (df.evaluate(name) if name != '...' else ['...'] * (N)) for name in column_names}
             except:
                 values = {}
                 for i, name in enumerate(column_names):
                     try:
-                        values[name] = df.evaluate(name)
+                        if name != '...':
+                            values[name] = df.evaluate(name)
+                        else:
+                            values[name] = ['...'] * (N)
                     except:
                         values[name] = ["error"] * (N)
                         logger.exception('error evaluating: %s at rows %i-%i' % (name, k1, k2))

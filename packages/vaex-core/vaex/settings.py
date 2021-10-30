@@ -2,6 +2,7 @@ import os
 import logging
 import vaex.utils
 import collections
+from dataclasses import dataclass
 
 try:
     collections_abc = collections.abc
@@ -94,10 +95,16 @@ class AutoStoreDict(collections_abc.MutableMapping):
         return key
 
 
+@dataclass
+class DisplayOptions:
+        max_columns: int = 50
+        max_rows: int = 10     # Future plans.
+
 main = Settings(os.path.join(vaex.utils.get_private_dir(), "main.yml"))
 webclient = Settings(os.path.join(vaex.utils.get_private_dir(), "webclient.yml"))
 webserver = Settings(os.path.join(vaex.utils.get_private_dir(), "webserver.yml"))
 cluster = Settings(os.path.join(vaex.utils.get_private_dir(), "cluster.yml"))
+display = DisplayOptions()
 
 # yaml.load()
 
